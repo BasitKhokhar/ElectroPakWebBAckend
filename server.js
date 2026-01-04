@@ -16,7 +16,7 @@ const { sequelize } = require('./models');
 const { LogoImage, HomeParagraph, User, SliderImage, Categories, Subcategories, Products,
   TrendingProduct, OnSaleProduct, Homevideos, CustomerSupportOption, Brand, About, AboutImage, AboutUs, AboutMission,
   PaymentMethod, Service, MapImage, Plumber, ContactForm, Cart, Social_Icons, ContactList,
-  FooterLinks, FooterInfo } = require('./models');
+  FooterLinks, FooterInfo, AppOrder, AppOrderItem } = require('./models');
 
 
 // firebase attachemnt//
@@ -117,7 +117,7 @@ app.post('/login', async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
-    res.status(200).json({ userId: user.user_id, message: 'Login successful' });
+    res.status(200).json({ userId: user.user_id, username: user.name, useremail: user.email, message: 'Login successful' });
   } catch (error) {
     console.error('Error logging in:', error);
     res.status(500).json({ message: 'Internal Server Error' });
@@ -477,23 +477,77 @@ app.get("/payment_methods", async (req, res) => {
 //   });
 // });
 
-app.post('/orders', (req, res) => {
-  const { orderId, userId, userName, totalAmount, shippingCost, finalTotal, totalItems, orderDate } = req.body;
+app.post('/orders', async (req, res) => {
+  console.log("📥 Received order request:", req.body);
 
-  const sql = `
-    INSERT INTO orders (order_id, user_id, user_name, total_amount, shipping_cost, final_total, total_items, order_date)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `;
+  const {
+    name,
+    phone,
+    email,
+    city,
+    address,
+    receipt_url,
+    user_id,
+    subtotal,
+    shipping_charges,
+    total_amount,
+    cart_items,
+    source
+  } = req.body;
 
-  const values = [orderId, userId, userName, totalAmount, shippingCost, finalTotal, totalItems, orderDate];
+  // Validation
+  if (!name || !phone || !email || !city || !address || subtotal === undefined || shipping_charges === undefined || total_amount === undefined || !cart_items || !cart_items.length) {
+    console.error("❌ Missing required fields in request");
+    return res.status(400).json({ error: "Missing required fields" });
+  }
 
-  db.query(sql, values, (error, result) => {
-    if (error) {
-      console.error('Error storing order:', error);
-      return res.status(500).json({ message: 'Failed to store order data.' });
-    }
-    res.status(200).json({ message: 'Order successfully stored!' });
-  });
+  try {
+    // Start a transaction to ensure both order and items are saved
+    const result = await sequelize.transaction(async (t) => {
+      // 1. Create the order
+      const order = await AppOrder.create({
+        user_id,
+        name,
+        email,
+        phone,
+        city,
+        address,
+        receipt_url,
+        subtotal,
+        shipping_charges,
+        total_amount,
+        status: 'In Progress',
+        source: source || 'Web'
+      }, { transaction: t });
+
+      console.log(`✅ Order created with ID: ${order.order_id} from ${source || 'Web'}`);
+
+      // 2. Create order items
+      const itemData = cart_items.map(item => ({
+        order_id: order.order_id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        product_id: item.id || item.product_id,
+        image_url: item.image_url,
+        selectedColor: item.selectedColor
+      }));
+
+      await AppOrderItem.bulkCreate(itemData, { transaction: t });
+      console.log("✅ Order items inserted successfully!");
+
+      return order;
+    });
+
+    res.status(201).json({
+      message: "Order placed successfully!",
+      order_id: result.order_id
+    });
+
+  } catch (error) {
+    console.error("❌ Error placing order:", error);
+    res.status(500).json({ error: "Server error while placing order", details: error.message });
+  }
 });
 
 // footer APIS start //
