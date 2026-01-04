@@ -631,7 +631,7 @@ app.get("/home_videos", async (req, res) => {
 // Start the server
 
 // Api for port
-const PORT = process.env.PORT;
+const PORT = process.env.DB_PORT;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
