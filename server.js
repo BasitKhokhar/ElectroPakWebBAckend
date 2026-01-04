@@ -164,12 +164,26 @@ app.get('/subcategories/:subcategoryId/products', async (req, res) => {
   }
 });
 // MySQL Database Connection //
-const db = mysql.createConnection({
+const dbConfig = {
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME
-});
+};
+
+// Only add port if it's explicitly set AND not equal to the server port (common local conflict)
+if (process.env.DB_PORT && process.env.DB_PORT !== '5000') {
+  dbConfig.port = process.env.DB_PORT;
+}
+
+// Add SSL for production
+if (process.env.NODE_ENV === 'production') {
+  dbConfig.ssl = {
+    rejectUnauthorized: false
+  };
+}
+
+const db = mysql.createConnection(dbConfig);
 
 // Connect to the MySQL database //
 db.connect((err) => {
