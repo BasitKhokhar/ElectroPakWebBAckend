@@ -15,8 +15,8 @@ app.use(bodyParser.json());
 const { sequelize } = require('./models');
 const { LogoImage, HomeParagraph, User, SliderImage, Categories, Subcategories, Products,
   TrendingProduct, OnSaleProduct, Homevideos, CustomerSupportOption, Brand, About, AboutImage, AboutUs, AboutMission,
-  PaymentMethod, Service, MapImage, Plumber, ContactForm, Cart,Social_Icons,ContactList,
-FooterLinks,FooterInfo } = require('./models');
+  PaymentMethod, Service, MapImage, Plumber, ContactForm, Cart, Social_Icons, ContactList,
+  FooterLinks, FooterInfo } = require('./models');
 
 
 // firebase attachemnt//
