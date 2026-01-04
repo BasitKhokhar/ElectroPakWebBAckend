@@ -11,6 +11,10 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
+if (process.env.NODE_ENV === 'production' && !process.env.DB_NAME) {
+  console.error('❌ CRITICAL ERROR: DB_NAME environment variable is missing in production!');
+}
+
 // ipmorting all sequelize models
 const { sequelize } = require('./models');
 const { LogoImage, HomeParagraph, User, SliderImage, Categories, Subcategories, Products,
@@ -191,7 +195,7 @@ db.connect((err) => {
     console.error('Error connecting to the database:', err);
     return;
   }
-  console.log('Database connected!');
+  console.log(`Database connected! (DB: ${process.env.DB_NAME || 'None selected'})`);
 });
 // simple API jsut for checking database is connected or not
 app.get('/', (req, res) => {
